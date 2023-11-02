@@ -2,7 +2,6 @@
 // nodeId = 2661345693
 ///////////////////////////////////////////////////////// внешні бібліотеки
 #include "painlessMesh.h"
-//#include <Arduino.h>                           // шоб меньше ошибок совместимости було
 #include <U8g2lib.h>                           // драйвер дисплея
 #include "DHT.h"                               // сенсор влажності і температури
 #include <Wire.h>                              // І2С
@@ -19,7 +18,27 @@
 #define   MESH_PREFIX     "kennet"
 #define   MESH_PASSWORD   "kennet123"
 
+/////////////////////////////////////////////////////// всякі класи
 painlessMesh  mesh;
+
+MHZ19 myMHZ19;                                             
+
+HardwareSerial mySerial(2);
+
+Adafruit_BMP280 bmp280;                                    // обєкт бібліотеки барометра
+
+U8G2_SSD1327_WS_128X128_F_4W_HW_SPI u8g2(U8G2_R0, /* cs=*/ 5, /* dc=*/ 2 ); // піни підключеня дисплея но тут вони не всі бо spi апаратний
+
+DHT dht(4, DHT22);                                         // пін і тип сенсора влажності і температури 
+
+Max44009 myLux(Max44009::Boolean::False);                  
+
+MAX30105 PARTICLE_SENSOR;                                  // обявляе обект класа пусльсометра
+
+iarduino_RTC watch(RTC_DS3231);                            // Объявляем объект watch для модуля часу
+
+RevEng_PAJ7620 sensor = RevEng_PAJ7620();
+Gesture gesture;  
 
 
 // void sendMessage() {
@@ -44,6 +63,9 @@ void receivedCallback( uint32_t from, String &msg ) {
 
   String str4 = "redled_on";
   String str5 = "redled_off";
+
+  String str6 = "ppm_echo";
+
 
   String compKey = "01";                         // "01_mode_2"
   if (str1.substring(0, 2) == compKey) {
@@ -80,6 +102,13 @@ void receivedCallback( uint32_t from, String &msg ) {
 
   } else if (str1.equals(str4)) {    redled_pow = "ON";
   } else if (str1.equals(str5)) {    redled_pow = "OFF";
+  }
+
+  if (str1.equals(str6)) { 
+    String x = "04";
+    String ppm = String(myMHZ19.getCO2()); 
+    ppm = x + ppm;
+    mesh.sendSingle(624409705,ppm);
   }
 
 }
@@ -546,25 +575,7 @@ const uint8_t egg[2048] PROGMEM = {
 };
 ClickPic Pic;                                             // обявляем обект структури
 
-/////////////////////////////////////////////////////// всякі класи
-MHZ19 myMHZ19;                                             
 
-HardwareSerial mySerial(2);
-
-Adafruit_BMP280 bmp280;                                    // обєкт бібліотеки барометра
-
-U8G2_SSD1327_WS_128X128_F_4W_HW_SPI u8g2(U8G2_R0, /* cs=*/ 5, /* dc=*/ 2 ); // піни підключеня дисплея но тут вони не всі бо spi апаратний
-
-DHT dht(4, DHT22);                                         // пін і тип сенсора влажності і температури 
-
-Max44009 myLux(Max44009::Boolean::False);                  
-
-MAX30105 PARTICLE_SENSOR;                                  // обявляе обект класа пусльсометра
-
-iarduino_RTC watch(RTC_DS3231);                            // Объявляем объект watch для модуля часу
-
-RevEng_PAJ7620 sensor = RevEng_PAJ7620();
-Gesture gesture;  
                 
 ////////////////////////////////////////////////////// всякі переменні
 
