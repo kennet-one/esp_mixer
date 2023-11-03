@@ -65,6 +65,7 @@ void receivedCallback( uint32_t from, String &msg ) {
   String str5 = "redled_off";
 
   String str6 = "ppm_echo";
+  String str7 = "temp_echo";
 
 
   String compKey = "01";                         // "01_mode_2"
@@ -109,6 +110,13 @@ void receivedCallback( uint32_t from, String &msg ) {
     String ppm = String(myMHZ19.getCO2()); 
     ppm = x + ppm;
     mesh.sendSingle(624409705,ppm);
+  }
+
+  if (str1.equals(str7)) { 
+    String x = "05";
+    String temp = String(dht.readTemperature()); 
+    temp = x + temp;
+    mesh.sendSingle(624409705,temp);
   }
 
 }
