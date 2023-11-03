@@ -14,10 +14,8 @@
 #include "MHZ19.h"                             // СО2 сенсор
 #include "RevEng_PAJ7620.h"                    // сенсор жестів
 /////////////////////////////////////////////////////////////////// картінки
-
 #define   MESH_PREFIX     "kennet"
 #define   MESH_PASSWORD   "kennet123"
-
 /////////////////////////////////////////////////////// всякі класи
 painlessMesh  mesh;
 
@@ -66,6 +64,7 @@ void receivedCallback( uint32_t from, String &msg ) {
 
   String str6 = "ppm_echo";
   String str7 = "temp_echo";
+  String str8 = "humi_echo";
 
 
   String compKey = "01";                         // "01_mode_2"
@@ -117,6 +116,13 @@ void receivedCallback( uint32_t from, String &msg ) {
     String temp = String(dht.readTemperature()); 
     temp = x + temp;
     mesh.sendSingle(624409705,temp);
+  }
+
+  if (str1.equals(str8)) { 
+    String x = "06";
+    String humi = String(dht.readHumidity()); 
+    humi = x + humi;
+    mesh.sendSingle(624409705,humi);
   }
 
 }
@@ -260,7 +266,6 @@ const uint8_t egg[2048] PROGMEM = {
  
   const uint16_t mesh_pic_widht PROGMEM = 128; // Размер в пикселях, а не в байтах
   const uint16_t mesh_pic_height PROGMEM = 64;
-  // const uint16_t mesh_pic_size PROGMEM = 1024;
   const uint8_t mesh_pic[1024] PROGMEM = {
     0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,
     0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,
@@ -838,9 +843,6 @@ void guest() {
           wind = 0;
         }
 
-        // if (wind == 5){
-        //   mesh.sendSingle(2224853816,"brightness+10");
-        // }
         break;
       }
 
@@ -850,9 +852,6 @@ void guest() {
           wind = 5;
         }
 
-        // if (wind == 5){
-        //   mesh.sendSingle(2224853816,"brightness-10");
-        // }
         break;
       }
 
@@ -892,15 +891,12 @@ void guest() {
 //}
 //////////////////////////////////////////////////////////////////////////// ламповий сетапчик
 void setup(void) {
-
   Serial.begin(9600);
 
   mesh.init( MESH_PREFIX, MESH_PASSWORD );
   mesh.onReceive(&receivedCallback);
   mesh.onNewConnection(&newConnectionCallback);
   mesh.onChangedConnections(&changedConnectionCallback);
-  //mesh.onNodeTimeAdjusted(&nodeTimeAdjustedCallback);
-
 
   sensor.begin();
 
@@ -931,7 +927,6 @@ void setup(void) {
   watch.begin();
 
   set_lang ();
-
 }
 
 ////////////////////////////////////////////////////////////////////// основна куча гавна
