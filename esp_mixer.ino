@@ -65,6 +65,7 @@ void receivedCallback( uint32_t from, String &msg ) {
   String str6 = "ppm_echo";
   String str7 = "temp_echo";
   String str8 = "humi_echo";
+  String str9 = "lux_echo";
 
 
   String compKey = "01";                         // "01_mode_2"
@@ -123,6 +124,13 @@ void receivedCallback( uint32_t from, String &msg ) {
     String humi = String(dht.readHumidity()); 
     humi = x + humi;
     mesh.sendSingle(624409705,humi);
+  }
+
+  if (str1.equals(str9)) { 
+    String x = "07";
+    String lux = String(myLux.getLux()); 
+    lux = x + lux;
+    mesh.sendSingle(624409705,lux);
   }
 
 }
