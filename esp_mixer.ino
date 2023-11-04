@@ -66,6 +66,7 @@ void receivedCallback( uint32_t from, String &msg ) {
   String str7 = "temp_echo";
   String str8 = "humi_echo";
   String str9 = "lux_echo";
+  String str10 = "atm_echo";
 
 
   String compKey = "01";                         // "01_mode_2"
@@ -131,6 +132,13 @@ void receivedCallback( uint32_t from, String &msg ) {
     String lux = String(myLux.getLux()); 
     lux = x + lux;
     mesh.sendSingle(624409705,lux);
+  }
+
+  if (str1.equals(str10)) { 
+    String x = "08";
+    String atm = String(bmp280.readPressure()*0.00750063755419211); 
+    atm = x + atm;
+    mesh.sendSingle(624409705,atm);
   }
 
 }
@@ -596,8 +604,7 @@ const uint8_t egg[2048] PROGMEM = {
 };
 ClickPic Pic;                                             // обявляем обект структури
 
-
-                
+       
 ////////////////////////////////////////////////////// всякі переменні
 
 struct Ir {
@@ -664,7 +671,6 @@ uint32_t trimi;
 
 String connect;
 bool connectF = 0;
-
 ///////////////////////////////////////////////////////////////////////// функції
 void lang_flip() {
   if (Lang.ling == 0) {
@@ -810,19 +816,16 @@ void timeS (){
 void guest() {
   switch (gesture)                  // собствено сам обработчик жестів
   {
-    case GES_FORWARD:
-      {
+    case GES_FORWARD:      {
         break;
       }
 
-    case GES_BACKWARD:
-      {
+    case GES_BACKWARD:      {
         mesh.sendSingle(624315197,"next_eff");
         break;
       }
 
-    case GES_LEFT:
-      {
+    case GES_LEFT:      {
         if (wind == 0){
           wind = 1;
         }
@@ -833,8 +836,7 @@ void guest() {
         break;
       }
 
-    case GES_RIGHT:
-      {
+    case GES_RIGHT:      {
         if (wind == 0){
           wind = 2;
         }
@@ -845,8 +847,7 @@ void guest() {
         break;
       }
 
-    case GES_UP:
-      {
+    case GES_UP:      {
         if (wind != 0 && wind != 5) {
           wind = 0;
         }
@@ -854,8 +855,7 @@ void guest() {
         break;
       }
 
-    case GES_DOWN:
-      {
+    case GES_DOWN:      {
         if (wind == 0) {
           wind = 5;
         }
@@ -863,29 +863,24 @@ void guest() {
         break;
       }
 
-    case GES_CLOCKWISE:
-      {
+    case GES_CLOCKWISE:      {
         mesh.sendSingle(624315197,"power"); //red_led
         break;
       }
 
-    case GES_ANTICLOCKWISE:
-      {
+    case GES_ANTICLOCKWISE:      {
         lang_flip();
         break;
       }
 
-    case GES_WAVE:
-      {
+    case GES_WAVE:      {
         wind = 3;
         break;
       }
 
-    case GES_NONE:
-      {
+    case GES_NONE:      {
         break;
       }
-      
   }
 }
 
@@ -1019,7 +1014,6 @@ void loop(void) {
     case 1:                                 //////////
       u8g2.firstPage();
       do {
-
         backTimer();
 
         if (IR.irValue > 50000) {
