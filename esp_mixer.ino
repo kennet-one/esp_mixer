@@ -51,10 +51,51 @@ char16_t redled_mod = 999;
 String redled_pow = "999";
 char16_t redled_bri = 999;
 
+void ppm_fit(){
+  String ppm = "04" + String(myMHZ19.getCO2()); 
+    mesh.sendSingle(624409705,ppm);
+}
+void temp_fit(){
+  String temp = "05" + String(dht.readTemperature()); 
+    mesh.sendSingle(624409705,temp);
+}
+void humi_fit(){
+  String humi = "06" + String(dht.readHumidity()); 
+    mesh.sendSingle(624409705,humi);
+}
+void lux_fit(){
+  String lux = "07" + String(myLux.getLux()); 
+    mesh.sendSingle(624409705,lux);
+}
+void atm_fit(){
+  String atm = "08" + String(bmp280.readPressure()*0.00750063755419211); 
+    mesh.sendSingle(624409705,atm);
+}
+unsigned long prevMf = 0;
+const long fval = 10;
+
+void sens_fit(){
+  unsigned long cMillis = millis();
+
+  if (cMillis - prevMf >= fval) {
+    prevMf = cMillis; // Оновлення часу перед викликом кожної функції
+
+    ppm_fit();
+    prevMf = millis(); // Оновлення часу після кожної функції
+    temp_fit();
+    prevMf = millis();
+    humi_fit();
+    prevMf = millis();
+    lux_fit();
+    prevMf = millis();
+    atm_fit();
+  }
+}
 
 
 void receivedCallback( uint32_t from, String &msg ) {
   String str1 = msg.c_str();
+  Serial.print(str1);
 
   String str2 = "garland_on";
   String str3 = "garland_off";
@@ -67,6 +108,7 @@ void receivedCallback( uint32_t from, String &msg ) {
   String str8 = "humi_echo";
   String str9 = "lux_echo";
   String str10 = "atm_echo";
+  String str11 = "sens_echo";
 
 
   String compKey = "01";                         // "01_mode_2"
@@ -107,38 +149,23 @@ void receivedCallback( uint32_t from, String &msg ) {
   }
 
   if (str1.equals(str6)) { 
-    String x = "04";
-    String ppm = String(myMHZ19.getCO2()); 
-    ppm = x + ppm;
-    mesh.sendSingle(624409705,ppm);
+    ppm_fit();
   }
-
   if (str1.equals(str7)) { 
-    String x = "05";
-    String temp = String(dht.readTemperature()); 
-    temp = x + temp;
-    mesh.sendSingle(624409705,temp);
+    temp_fit();
   }
-
   if (str1.equals(str8)) { 
-    String x = "06";
-    String humi = String(dht.readHumidity()); 
-    humi = x + humi;
-    mesh.sendSingle(624409705,humi);
+    humi_fit();
   }
-
   if (str1.equals(str9)) { 
-    String x = "07";
-    String lux = String(myLux.getLux()); 
-    lux = x + lux;
-    mesh.sendSingle(624409705,lux);
+    lux_fit();
   }
-
   if (str1.equals(str10)) { 
-    String x = "08";
-    String atm = String(bmp280.readPressure()*0.00750063755419211); 
-    atm = x + atm;
-    mesh.sendSingle(624409705,atm);
+    atm_fit();
+  }
+  if (str1.equals(str11)) { 
+    sens_fit();
+    Serial.print("sens_serial");
   }
 
 }
