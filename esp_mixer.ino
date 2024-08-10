@@ -7,7 +7,6 @@
 #include <Wire.h>                              // І2С
 #include <SPI.h>                               // SPI на якому висить дісплей
 #include "Max44009.h"                          // люксометр
-#include <Adafruit_BMP280.h>                   // барометр
 #include "MAX30105.h"                          // пульсометр
 #include "heartRate.h"                         // чекер пульса
 #include <iarduino_RTC.h>                      // часи
@@ -22,8 +21,6 @@ painlessMesh  mesh;
 MHZ19 myMHZ19;                                             
 
 HardwareSerial mySerial(2);
-
-Adafruit_BMP280 bmp280;                                    // обєкт бібліотеки барометра
 
 U8G2_SSD1327_WS_128X128_F_4W_HW_SPI u8g2(U8G2_R0, /* cs=*/ 5, /* dc=*/ 2 ); // піни підключеня дисплея но тут вони не всі бо spi апаратний
 
@@ -67,10 +64,7 @@ void lux_fit(){
   String lux = "07" + String(myLux.getLux()); 
     mesh.sendSingle(624409705,lux);
 }
-void atm_fit(){
-  String atm = "08" + String(bmp280.readPressure()*0.00750063755419211); 
-    mesh.sendSingle(624409705,atm);
-}
+
 unsigned long prevMf = 0;
 const long fval = 10;
 
@@ -88,7 +82,6 @@ void sens_fit(){
     prevMf = millis();
     lux_fit();
     prevMf = millis();
-    atm_fit();
   }
 }
 
@@ -107,7 +100,6 @@ void receivedCallback( uint32_t from, String &msg ) {
   String str7 = "temp_echo";
   String str8 = "humi_echo";
   String str9 = "lux_echo";
-  String str10 = "atm_echo";
   String str11 = "sens_echo";
 
 
@@ -159,9 +151,6 @@ void receivedCallback( uint32_t from, String &msg ) {
   }
   if (str1.equals(str9)) { 
     lux_fit();
-  }
-  if (str1.equals(str10)) { 
-    atm_fit();
   }
   if (str1.equals(str11)) { 
     sens_fit();
@@ -679,9 +668,6 @@ lang Lang;
 int ppm;
 unsigned long getDataTimer = 0;
 
-unsigned long bar_Timer = 0;
-float pressure;
-
 float weep;
 float temp;
 unsigned long temp_Timer = 0;
@@ -813,14 +799,6 @@ int giv_ppm () {                                      // вертає урове
   }
 }
 
-float barometr () {                                     // вертає значення барометра
-  if (millis() - bar_Timer >= 1001) {
-    pressure = bmp280.readPressure()*0.00750063755419211;
-    bar_Timer = millis();
-    return pressure;
-  }
-}
-
 int givFlux () {                             // функція збору люксів 
     if (millis() - lostTime >= 1000) {       // шоб дані не збиралися дуже часто
     lostTime += 1000;                        // тут скидуєм таймер
@@ -837,7 +815,6 @@ void timeS (){
   printCursor (0,100,watch.gettime("H:i:s"));
   u8g2.setFont(u8g2_font_cu12_t_cyrillic);
 }
-
 
 
 void guest() {
@@ -941,9 +918,7 @@ void setup(void) {
   u8g2.sendBuffer();                                      // висилка буфера)
   delay(1000);                                            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   u8g2.enableUTF8Print();  
-  u8g2.setFont(u8g2_font_cu12_t_cyrillic);                // підтримка шрифтом українського текста
-
-  bmp280.begin(0x76); 
+  u8g2.setFont(u8g2_font_cu12_t_cyrillic);                // підтримка шрифтом українського текста 
 
   Wire.begin(21, 22);                                     // ініт I2C
 
@@ -974,7 +949,6 @@ void loop(void) {
 
   redSens();
 
-  barometr();
 
   if (millis() - temp_Timer >= 2002) {
     weep = dht.readHumidity();
@@ -1025,9 +999,9 @@ void loop(void) {
           u8g2.print(Lang.lang1[8]);
         }
 
-        printCursor (0,90,Lang.lang1[9]);
-        printCursor (60,90,pressure);
-        printCursor (105,90,Lang.lang1[10]);
+        //printCursor (0,90,Lang.lang1[9]);
+        //printCursor (60,90,pressure);
+        //printCursor (105,90,Lang.lang1[10]);
 
         printCursor (0,126,Lang.lang1[11]);
         printCursor (40,126,ppm);
