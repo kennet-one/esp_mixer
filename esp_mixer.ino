@@ -643,7 +643,7 @@ Ir IR;                // обект структури
 
 struct lang {
   const char* uap1[13] = {
-    "Пізда сухо","Сухо","Нормась","Заєбок","Шикарно","За дуже","%","C |","lux",
+    "Пізда сухо","Сухо","Нормась","Заєбок","Шикарно","За дуже","%","C","Lux",
     "Давленіє","mm","СО 2", "ppm"
   };
   const char* uap2[5] = {
@@ -651,7 +651,7 @@ struct lang {
   };
 
   const char* enp1[13] = {
-    "Fuckin' dry", "Dry", "Okay", "Awesome", "Great", "Very much", "%", "C |", "lux", "Pressure", "mm", "CO 2", "ppm"
+    "Fuckin' dry", "Dry", "Okay", "Awesome", "Great", "Very much", "%", "C", "Lux", "Pressure", "mm", "CO 2", "ppm"
   };
   const char* enp2[5] = {
     "IR=", "BPM=", "SBPM=", "Finger", "Hug"
@@ -987,21 +987,20 @@ void loop(void) {
         printCursor (0,50,temp);
         printCursor (36,50,Lang.lang1[7]);
 
-        printCursor (61,50,flux);
+        printCursor (0,90,flux);
         if (flux < 1000) {
           if (flux < 10) {
-            u8g2.setCursor(93, 50);
-          } else  if (flux < 100) {
-            u8g2.setCursor(100, 50);
+            u8g2.setCursor(34, 90);
+            u8g2.print(Lang.lang1[8]);
           } else {
-            u8g2.setCursor(105, 50);
+            u8g2.setCursor(43, 90);
+            u8g2.print(Lang.lang1[8]);
           }
+        } else {
+          u8g2.setCursor(48, 90);
           u8g2.print(Lang.lang1[8]);
         }
 
-        //printCursor (0,90,Lang.lang1[9]);
-        //printCursor (60,90,pressure);
-        //printCursor (105,90,Lang.lang1[10]);
 
         printCursor (0,126,Lang.lang1[11]);
         printCursor (40,126,ppm);
