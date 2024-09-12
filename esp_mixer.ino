@@ -15,7 +15,9 @@
 /////////////////////////////////////////////////////////////////// картінки
 #define   MESH_PREFIX     "kennet"
 #define   MESH_PASSWORD   "kennet123"
+#define   MESH_PORT       5555
 /////////////////////////////////////////////////////// всякі класи
+Scheduler userScheduler;
 painlessMesh  mesh;
 
 MHZ19 myMHZ19;                                             
@@ -900,7 +902,7 @@ void guest() {
 void setup(void) {
   Serial.begin(9600);
 
-  mesh.init( MESH_PREFIX, MESH_PASSWORD );
+  mesh.init( MESH_PREFIX, MESH_PASSWORD, &userScheduler, MESH_PORT );
   mesh.onReceive(&receivedCallback);
   mesh.onNewConnection(&newConnectionCallback);
   mesh.onChangedConnections(&changedConnectionCallback);
