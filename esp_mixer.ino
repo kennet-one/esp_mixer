@@ -38,18 +38,27 @@ RevEng_PAJ7620 sensor = RevEng_PAJ7620();
 Gesture gesture;  
 
 
-// void sendMessage() {
-//   String msg = "up";
-//   msg += mesh.getNodeId();
-  
-//   mesh.sendBroadcast( msg );
-// }
 String garland = "999";
 
 char16_t redled_mod = 999;
 String redled_pow = "999";
 char16_t redled_bri = 999;
 
+unsigned long tempfh = 0; 
+const unsigned long intempfh = 300000; // 5 хвилин у мілісекундах
+
+void temp_for_heat(){
+  String temp = "05" + String(dht.readTemperature()); 
+    mesh.sendSingle(1812998333,temp);
+}
+
+void tfhtimi () {
+  unsigned long x = millis(); 
+  if (x - tempfh >= intempfh) {
+    tempfh = x; 
+    temp_for_heat(); 
+  }
+}
 void ppm_fit(){
   String ppm = "04" + String(myMHZ19.getCO2()); 
     mesh.sendSingle(624409705,ppm);
@@ -938,6 +947,7 @@ void setup(void) {
 
 ////////////////////////////////////////////////////////////////////// основна куча гавна
 void loop(void) {
+  tfhtimi();
 
   connecT();
 
