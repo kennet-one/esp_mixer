@@ -12,10 +12,7 @@
 #include <iarduino_RTC.h>                      // часи
 #include "MHZ19.h"                             // СО2 сенсор
 #include "RevEng_PAJ7620.h"                    // сенсор жестів
-/////////////////////////////////////////////////////////////////// картінки
-#define   MESH_PREFIX     "kennet"
-#define   MESH_PASSWORD   "kennet123"
-#define   MESH_PORT       5555
+#include "mash_parameter.h"
 /////////////////////////////////////////////////////// всякі класи
 Scheduler userScheduler;
 painlessMesh  mesh;
