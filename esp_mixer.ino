@@ -46,7 +46,7 @@ const unsigned long intempfh = 300000; // 5 хвилин у мілісекунд
 
 void temp_for_heat(){
   String temp = "05" + String(dht.readTemperature()); 
-    mesh.sendSingle(1812998333,temp);
+    mesh.sendBroadcast(temp);
 }
 
 void tfhtimi () {
@@ -58,19 +58,19 @@ void tfhtimi () {
 }
 void ppm_fit(){
   String ppm = "04" + String(myMHZ19.getCO2()); 
-    mesh.sendSingle(624409705,ppm);
+    mesh.sendBroadcast(ppm);
 }
 void temp_fit(){
   String temp = "05" + String(dht.readTemperature()); 
-    mesh.sendSingle(624409705,temp);
+    mesh.sendBroadcast(temp);
 }
 void humi_fit(){
   String humi = "06" + String(dht.readHumidity()); 
-    mesh.sendSingle(624409705,humi);
+    mesh.sendBroadcast(humi);
 }
 void lux_fit(){
   String lux = "07" + String(myLux.getLux()); 
-    mesh.sendSingle(624409705,lux);
+    mesh.sendBroadcast(lux);
 }
 
 unsigned long prevMf = 0;
@@ -171,7 +171,7 @@ void receivedCallback( uint32_t from, String &msg ) {
 struct ClickPic {
 
 // Для получения этого кода использовался онлайн конвертер https://duino.ru/media/image-converter/index.html 
-const uint16_t egg_widht PROGMEM = 128; // Размер в пикселях, а не в байтах
+const uint16_t egg_width PROGMEM = 128; // Размер в пикселях, а не в байтах
 const uint16_t egg_height PROGMEM = 128;
 const uint8_t egg[2048] PROGMEM = {
   0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,
@@ -304,7 +304,7 @@ const uint8_t egg[2048] PROGMEM = {
   0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000100, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000100, 0b00001000,
 };
  
-  const uint16_t mesh_pic_widht PROGMEM = 128; // Размер в пикселях, а не в байтах
+  const uint16_t mesh_pic_width PROGMEM = 128; // Размер в пикселях, а не в байтах
   const uint16_t mesh_pic_height PROGMEM = 64;
   const uint8_t mesh_pic[1024] PROGMEM = {
     0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,
@@ -373,7 +373,7 @@ const uint8_t egg[2048] PROGMEM = {
     0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,
   };
 
-  const uint16_t logo_widht PROGMEM = 128; // Размер в пикселях, а не в байтах
+  const uint16_t logo_width PROGMEM = 128; // Размер в пикселях, а не в байтах
   const uint16_t logo_height PROGMEM = 128;
   const uint8_t logo[2048] PROGMEM = {
     0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b01111100, 0b00000000, 0b01000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,
@@ -506,7 +506,7 @@ const uint8_t egg[2048] PROGMEM = {
     0b00000000, 0b00000000, 0b00000000, 0b00010101, 0b01111111, 0b11111111, 0b11111111, 0b11111111, 0b11111111, 0b11111111, 0b11111111, 0b11111111, 0b10101010, 0b10101010, 0b10101111, 0b11111010,
   };
 
-  const uint16_t clickpic_widht PROGMEM = 64; // Размер в пикселях, а не в байтах
+  const uint16_t clickpic_width PROGMEM = 64; // Размер в пикселях, а не в байтах
   const uint16_t clickpic_height PROGMEM = 64;
   const uint8_t clickpic[512] PROGMEM = {
     0b00000000, 0b00000001, 0b11000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,
@@ -575,7 +575,7 @@ const uint8_t egg[2048] PROGMEM = {
     0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00111000, 0b00000000, 0b00000000, 0b00000000,
   };
 
-  const uint16_t ser_widht PROGMEM = 45; // Размер в пикселях, а не в байтах
+  const uint16_t ser_width PROGMEM = 45; // Размер в пикселях, а не в байтах
   const uint16_t ser_height PROGMEM = 45;
   const uint8_t ser[270] PROGMEM = {
     0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,
@@ -833,7 +833,7 @@ void guest() {
       }
 
     case GES_BACKWARD:      {
-        mesh.sendSingle(624315197,"next_eff");
+        mesh.sendBroadcast("next_eff");
         break;
       }
 
@@ -843,7 +843,7 @@ void guest() {
         }
 
         if (wind == 5){
-          mesh.sendSingle(624315197,"02_bri_5"); //red_led
+          mesh.sendBroadcast("02_bri_5"); //red_led
         }
         break;
       }
@@ -854,7 +854,7 @@ void guest() {
         }
 
         if (wind == 5){
-          mesh.sendSingle(2224853816,"garland");
+          mesh.sendBroadcast("garland");
         }
         break;
       }
@@ -876,7 +876,7 @@ void guest() {
       }
 
     case GES_CLOCKWISE:      {
-        mesh.sendSingle(624315197,"power"); //red_led
+        mesh.sendBroadcast("power"); //red_led
         break;
       }
 
@@ -1077,8 +1077,8 @@ void loop(void) {
     break;
 
     case 5:
-      mesh.sendSingle(2224853816,"garland_echo");
-      mesh.sendSingle(624315197,"red_led_echo"); 
+      mesh.sendBroadcast("garland_echo");
+      mesh.sendBroadcast("red_led_echo"); 
 
       u8g2.firstPage();
       do{
