@@ -2,6 +2,7 @@
 // nodeId = 985208077
 ///////////////////////////////////////////////////////// внешні бібліотеки
 #include "painlessMesh.h"
+#include "CRCMASH.h" 
 #include <U8g2lib.h>                           // драйвер дисплея
 #include "DHT.h"                               // сенсор влажності і температури
 #include <Wire.h>                              // І2С
@@ -15,8 +16,6 @@
 #include "mash_parameter.h"
 /////////////////////////////////////////////////////// всякі класи
 Scheduler userScheduler;
-painlessMesh  mesh;
-
 MHZ19 myMHZ19;                                             
 
 HardwareSerial mySerial(2);
@@ -42,11 +41,11 @@ String redled_pow = "999";
 char16_t redled_bri = 999;
 
 unsigned long tempfh = 0; 
-const unsigned long intempfh = 300000; // 5 хвилин у мілісекундах
+const unsigned long intempfh = 200000; // 5666 хвилин у мілісекундах
 
 void temp_for_heat(){
   String temp = "05" + String(dht.readTemperature()); 
-    mesh.sendBroadcast(temp);
+    sendB(temp);
 }
 
 void tfhtimi () {
@@ -58,19 +57,19 @@ void tfhtimi () {
 }
 void ppm_fit(){
   String ppm = "04" + String(myMHZ19.getCO2()); 
-    mesh.sendBroadcast(ppm);
+    sendB(ppm);
 }
 void temp_fit(){
   String temp = "05" + String(dht.readTemperature()); 
-    mesh.sendBroadcast(temp);
+    sendB(temp);
 }
 void humi_fit(){
   String humi = "06" + String(dht.readHumidity()); 
-    mesh.sendBroadcast(humi);
+    sendB(humi);
 }
 void lux_fit(){
   String lux = "07" + String(myLux.getLux()); 
-    mesh.sendBroadcast(lux);
+    sendB(lux);
 }
 
 unsigned long prevMf = 0;
@@ -94,8 +93,12 @@ void sens_fit(){
 }
 
 
-void receivedCallback( uint32_t from, String &msg ) {
-  String str1 = msg.c_str();
+
+
+// === Deferred handler: was receivedCallback body; now called from loop() ===
+void handleBodyFrom(uint32_t from, const String& body){
+
+  String str1 = body;
   Serial.print(str1);
 
   String str2 = "garland_on";
@@ -165,7 +168,10 @@ void receivedCallback( uint32_t from, String &msg ) {
     Serial.print("sens_serial");
   }
 
+
 }
+
+
 
 
 struct ClickPic {
@@ -833,7 +839,7 @@ void guest() {
       }
 
     case GES_BACKWARD:      {
-        mesh.sendBroadcast("next_eff");
+        sendB("next_eff");
         break;
       }
 
@@ -843,7 +849,7 @@ void guest() {
         }
 
         if (wind == 5){
-          mesh.sendBroadcast("02_bri_5"); //red_led
+          sendB("02_bri_5"); //red_led
         }
         break;
       }
@@ -854,7 +860,7 @@ void guest() {
         }
 
         if (wind == 5){
-          mesh.sendBroadcast("garland");
+          sendB("garland");
         }
         break;
       }
@@ -876,7 +882,7 @@ void guest() {
       }
 
     case GES_CLOCKWISE:      {
-        mesh.sendBroadcast("power"); //red_led
+        sendB("power"); //red_led
         break;
       }
 
@@ -944,6 +950,13 @@ void setup(void) {
 
 ////////////////////////////////////////////////////////////////////// основна куча гавна
 void loop(void) {
+  // --- deferred CRC queue processing (addressed) ---
+  for (uint8_t __i=0; __i<3; ++__i){
+    uint32_t __from; String __body;
+    if (!qPop2(__from, __body)) break;
+    handleBodyFrom(__from, __body);
+  }
+
   tfhtimi();
 
   connecT();
@@ -1077,8 +1090,8 @@ void loop(void) {
     break;
 
     case 5:
-      mesh.sendBroadcast("garland_echo");
-      mesh.sendBroadcast("red_led_echo"); 
+      sendB("garland_echo");
+      sendB("red_led_echo"); 
 
       u8g2.firstPage();
       do{
