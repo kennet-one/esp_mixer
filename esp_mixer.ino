@@ -2,7 +2,7 @@
 // nodeId = 985208077
 ///////////////////////////////////////////////////////// внешні бібліотеки
 #include "painlessMesh.h"
-#include "CRCMASH.h" 
+#include "CRC.h"
 #include <U8g2lib.h>                           // драйвер дисплея
 #include "DHT.h"                               // сенсор влажності і температури
 #include <Wire.h>                              // І2С
@@ -17,6 +17,8 @@
 #include "IMG.h"
 /////////////////////////////////////////////////////// всякі класи
 Scheduler userScheduler;
+painlessMesh mesh; 
+
 MHZ19 myMHZ19;                                             
 
 HardwareSerial mySerial(2);
@@ -93,83 +95,60 @@ void sens_fit(){
   }
 }
 
-
-
-
-// === Deferred handler: was receivedCallback body; now called from loop() ===
-void handleBodyFrom(uint32_t from, const String& body){
-
-  String str1 = body;
-  Serial.print(str1);
-
-  String str2 = "garland_on";
-  String str3 = "garland_off";
-
-  String str4 = "redled_on";
-  String str5 = "redled_off";
-
-  String str6 = "ppm_echo";
-  String str7 = "temp_echo";
-  String str8 = "humi_echo";
-  String str9 = "lux_echo";
-  String str11 = "sens_echo";
-
+void handleBody(const String& msg){
 
   String compKey = "01";                         // "01_mode_2"
-  if (str1.substring(0, 2) == compKey) {
-    if (str1.endsWith(String("0"))) {             redled_mod = 0;
-    } else if (str1.endsWith(String("1"))) {      redled_mod = 1;
-    } else if (str1.endsWith(String("2"))) {      redled_mod = 2;
-    } else if (str1.endsWith(String("3"))) {      redled_mod = 3;
-    } else if (str1.endsWith(String("4"))) {      redled_mod = 4;
-    } else if (str1.endsWith(String("5"))) {      redled_mod = 5;
-    } else if (str1.endsWith(String("6"))) {      redled_mod = 6;
-    } else if (str1.endsWith(String("7"))) {      redled_mod = 7;
-    } else if (str1.endsWith(String("8"))) {      redled_mod = 8;
+  if (msg.substring(0, 2) == compKey) {
+    if (msg.endsWith(String("0"))) {             redled_mod = 0;
+    } else if (msg.endsWith(String("1"))) {      redled_mod = 1;
+    } else if (msg.endsWith(String("2"))) {      redled_mod = 2;
+    } else if (msg.endsWith(String("3"))) {      redled_mod = 3;
+    } else if (msg.endsWith(String("4"))) {      redled_mod = 4;
+    } else if (msg.endsWith(String("5"))) {      redled_mod = 5;
+    } else if (msg.endsWith(String("6"))) {      redled_mod = 6;
+    } else if (msg.endsWith(String("7"))) {      redled_mod = 7;
+    } else if (msg.endsWith(String("8"))) {      redled_mod = 8;
     }
   }
 
   String briKey = "02";                         // "02_bri_2"
-  if (str1.substring(0, 2) == briKey) {
-    if (str1.endsWith(String("0"))) {             redled_bri = 0;
-    } else if (str1.endsWith(String("1"))) {      redled_bri = 10;
-    } else if (str1.endsWith(String("2"))) {      redled_bri = 20;
-    } else if (str1.endsWith(String("3"))) {      redled_bri = 30;
-    } else if (str1.endsWith(String("4"))) {      redled_bri = 40;
-    } else if (str1.endsWith(String("5"))) {      redled_bri = 50;
-    } else if (str1.endsWith(String("6"))) {      redled_bri = 60;
-    } else if (str1.endsWith(String("7"))) {      redled_bri = 70;
-    } else if (str1.endsWith(String("8"))) {      redled_bri = 80;
-    } else if (str1.endsWith(String("9"))) {      redled_bri = 90;
-    } else if (str1.endsWith(String("M"))) {      redled_bri = 100;
+  if (msg.substring(0, 2) == briKey) {
+    if (msg.endsWith(String("0"))) {             redled_bri = 0;
+    } else if (msg.endsWith(String("1"))) {      redled_bri = 10;
+    } else if (msg.endsWith(String("2"))) {      redled_bri = 20;
+    } else if (msg.endsWith(String("3"))) {      redled_bri = 30;
+    } else if (msg.endsWith(String("4"))) {      redled_bri = 40;
+    } else if (msg.endsWith(String("5"))) {      redled_bri = 50;
+    } else if (msg.endsWith(String("6"))) {      redled_bri = 60;
+    } else if (msg.endsWith(String("7"))) {      redled_bri = 70;
+    } else if (msg.endsWith(String("8"))) {      redled_bri = 80;
+    } else if (msg.endsWith(String("9"))) {      redled_bri = 90;
+    } else if (msg.endsWith(String("M"))) {      redled_bri = 100;
     }
   }
 
-  if (str1.equals(str2)) {           garland = "ON";
-  } else if (str1.equals(str3)) {    garland = "OFF";
+  if (msg.equals("garland_on")) {           garland = "ON";
+  } else if (msg.equals("garland_off")) {    garland = "OFF";
 
-  } else if (str1.equals(str4)) {    redled_pow = "ON";
-  } else if (str1.equals(str5)) {    redled_pow = "OFF";
+  } else if (msg.equals("redled_on")) {    redled_pow = "ON";
+  } else if (msg.equals("redled_off")) {    redled_pow = "OFF";
   }
 
-  if (str1.equals(str6)) { 
+  if (msg.equals("ppm_echo")) { 
     ppm_fit();
   }
-  if (str1.equals(str7)) { 
+  if (msg.equals("temp_echo")) { 
     temp_fit();
   }
-  if (str1.equals(str8)) { 
+  if (msg.equals("humi_echo")) { 
     humi_fit();
   }
-  if (str1.equals(str9)) { 
+  if (msg.equals("lux_echo")) { 
     lux_fit();
   }
-  if (str1.equals(str11)) { 
+  if (msg.equals("sens_echo")) { 
     sens_fit();
-    Serial.print("sens_serial");
   }
-
-
 }
  
 ////////////////////////////////////////////////////// всякі переменні
@@ -484,15 +463,10 @@ void setup(void) {
 
   set_lang ();
 }
-
 ////////////////////////////////////////////////////////////////////// основна куча гавна
 void loop(void) {
-  // --- deferred CRC queue processing (addressed) ---
-  for (uint8_t __i=0; __i<3; ++__i){
-    uint32_t __from; String __body;
-    if (!qPop2(__from, __body)) break;
-    handleBodyFrom(__from, __body);
-  }
+  // --- deferred CRC queue processing ---
+  for (uint8_t _i=0; _i<4; ++_i){ String _b; if (!qPop(_b)) break; handleBody(_b); }
 
   tfhtimi();
 
@@ -646,7 +620,6 @@ void loop(void) {
 
       } while ( u8g2.nextPage() );
     break;
-
     }
 }
 // spo2
