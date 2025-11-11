@@ -46,6 +46,10 @@ char16_t redled_bri = 999;
 unsigned long tempfh = 0; 
 const unsigned long intempfh = 200000; // 5666 хвилин у мілісекундах
 
+unsigned long previousMillis = 0;
+const long intervaldelay = 20000; 
+bool messageSent = false;  // Прапорець для відстеження відправки повідомлення
+
 void temp_for_heat(){
   String temp = "05" + String(dht.readTemperature()); 
     sendB(temp);
@@ -430,6 +434,8 @@ void guest() {
 void setup(void) {
   Serial.begin(9600);
 
+  WiFi.setSleep(false);
+
   mesh.init( MESH_PREFIX, MESH_PASSWORD, &userScheduler, MESH_PORT );
   mesh.onReceive(&receivedCallback);
   mesh.onNewConnection(&newConnectionCallback);
@@ -465,6 +471,16 @@ void setup(void) {
 }
 ////////////////////////////////////////////////////////////////////// основна куча гавна
 void loop(void) {
+
+  if (!messageSent) { // Перевіряємо, чи повідомлення ще не було відправлено
+    unsigned long currentMillis = millis();
+
+    if (currentMillis - previousMillis >= intervaldelay) {
+      sens_fit();
+      // Встановлюємо прапорець, щоб більше не відправляти повідомлення
+      messageSent = true;
+    }
+  }
   // --- deferred CRC queue processing ---
   for (uint8_t _i=0; _i<4; ++_i){ String _b; if (!qPop(_b)) break; handleBody(_b); }
 
