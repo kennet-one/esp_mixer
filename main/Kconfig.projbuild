@@ -1,0 +1,60 @@
+menu "esp_mixer"
+    config MIXER_I2C_SDA_GPIO
+        int "I2C SDA GPIO"
+        default 21
+    config MIXER_I2C_SCL_GPIO
+        int "I2C SCL GPIO"
+        default 22
+    config MIXER_DHT_GPIO
+        int "DHT22 GPIO"
+        default 4
+    config MIXER_DISPLAY_SCLK_GPIO
+        int "SSD1327 SCLK GPIO"
+        default 18
+    config MIXER_DISPLAY_MOSI_GPIO
+        int "SSD1327 MOSI GPIO"
+        default 23
+    config MIXER_DISPLAY_CS_GPIO
+        int "SSD1327 CS GPIO"
+        default 5
+    config MIXER_DISPLAY_DC_GPIO
+        int "SSD1327 DC GPIO"
+        default 2
+    config MIXER_MHZ19_RX_GPIO
+        int "MH-Z19B RX GPIO"
+        default 16
+    config MIXER_MHZ19_TX_GPIO
+        int "MH-Z19B TX GPIO"
+        default 17
+    config MIXER_MESH_RELAY_ELIGIBLE
+        bool "Allow ESP-MESH child nodes"
+        default y
+endmenu
+
+menu "ESP-MESH configuration"
+    config MESH_CHANNEL
+        int "Mesh Wi-Fi channel (0 = router channel)"
+        range 0 14
+        default 0
+    config MESH_ROUTER_SSID
+        string "Router SSID"
+        default ""
+    config MESH_ROUTER_PASSWD
+        string "Router password"
+        default ""
+    config MESH_AP_PASSWD
+        string "Mesh AP password"
+        default ""
+    config MESH_AP_CONNECTIONS
+        int "Maximum mesh children"
+        range 1 10
+        default 6
+    config MESH_NON_MESH_AP_CONNECTIONS
+        int "Maximum non-mesh AP clients"
+        range 0 10
+        default 0
+    config MESH_MAX_LAYER
+        int "Maximum mesh layer"
+        range 2 25
+        default 6
+endmenu

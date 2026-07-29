@@ -1,0 +1,36 @@
+idf_component_register(
+    SRCS
+        "app_snapshot.c"
+        "sensor_manager.c"
+        "sensor_drivers.c"
+        "mixer_i2c_bus.c"
+        "dht22_driver.c"
+        "mhz19_driver.c"
+        "max44009_driver.c"
+        "max30105_driver.c"
+        "heart_rate_algorithm.c"
+        "ds3231_driver.c"
+        "paj7620_driver.c"
+        "display_controller.c"
+        "gesture_controller.c"
+        "command_adapter.c"
+        "legacy_proto.c"
+        "mesh_runtime.c"
+        "mesh_binding.c"
+    PRIV_REQUIRES
+        keemash_mesh_core
+        u8g2
+        dht
+        esp_wifi
+        esp_driver_gpio
+        esp_driver_i2c
+        esp_driver_spi
+        esp_driver_uart
+        nvs_flash
+        esp_timer
+        esp_system
+        app_update
+        spi_flash
+        bootloader_support
+    INCLUDE_DIRS "."
+)
