@@ -33,6 +33,8 @@ static spi_device_handle_t s_spi;
 static u8g2_t s_u8g2;
 static TaskHandle_t s_display_task;
 static bool s_spi_bus_owned;
+static volatile uint32_t s_spi_error_count;
+static volatile esp_err_t s_spi_last_error;
 
 static uint32_t now_ms(void)
 {
@@ -61,40 +63,97 @@ static uint8_t byte_spi(u8x8_t *u8x8, uint8_t msg,
 			uint8_t arg_int, void *arg_ptr)
 {
 	(void)u8x8;
-	if (msg == U8X8_MSG_BYTE_SEND && arg_int > 0 && s_spi) {
+	switch (msg) {
+	case U8X8_MSG_BYTE_INIT:
+		return gpio_set_level(CONFIG_MIXER_DISPLAY_DC_GPIO, 0) == ESP_OK;
+	case U8X8_MSG_BYTE_SET_DC:
+		return gpio_set_level(CONFIG_MIXER_DISPLAY_DC_GPIO, arg_int) == ESP_OK;
+	case U8X8_MSG_BYTE_START_TRANSFER:
+	case U8X8_MSG_BYTE_END_TRANSFER:
+		return 1;
+	case U8X8_MSG_BYTE_SEND:
+		if (arg_int == 0) return 1;
+		if (!s_spi || !arg_ptr) return 0;
 		spi_transaction_t transaction = {
 			.length = (size_t)arg_int * 8,
 			.tx_buffer = arg_ptr,
 		};
-		return spi_device_polling_transmit(s_spi, &transaction) == ESP_OK;
+		esp_err_t err = spi_device_polling_transmit(s_spi, &transaction);
+		if (err != ESP_OK) {
+			s_spi_last_error = err;
+			s_spi_error_count++;
+			return 0;
+		}
+		return 1;
+	default:
+		return 0;
 	}
-	return 1;
 }
 
-static void draw_metric(int x, int y, const char *label,
-			const mixer_metric_t *metric, const char *unit)
+static void environment_shift(int *x, int *y)
 {
-	char line[32];
+	static const uint8_t offsets[4][2] = {
+		{0, 0}, {2, 0}, {2, 2}, {0, 2},
+	};
+	if (CONFIG_MIXER_DISPLAY_PIXEL_SHIFT_SECONDS <= 0) {
+		*x = 0;
+		*y = 0;
+		return;
+	}
+	uint32_t phase = (now_ms() /
+		((uint32_t)CONFIG_MIXER_DISPLAY_PIXEL_SHIFT_SECONDS * 1000U)) % 4U;
+	*x = offsets[phase][0];
+	*y = offsets[phase][1];
+}
+
+static void format_metric(char *buffer, size_t size,
+			  const mixer_metric_t *metric,
+			  const char *suffix, bool decimal)
+{
 	if (!metric->valid) {
-		snprintf(line, sizeof(line), "%s -- %s", label, unit);
-	} else {
-		snprintf(line, sizeof(line), "%s %.1f %s", label,
-			 metric->value_x10 / 10.0, unit);
+		snprintf(buffer, size, "--");
+		return;
 	}
-	u8g2_DrawUTF8(&s_u8g2, x, y, line);
+	double value = metric->value_x10 / 10.0;
+	snprintf(buffer, size, decimal ? "%.1f%s" : "%.0f%s",
+		 value, suffix);
 }
 
-static void draw_environment(const mixer_snapshot_t *snapshot, bool english)
+static int centered_cell_x(int cell_x, const char *text)
 {
-	u8g2_SetFont(&s_u8g2, english ? u8g2_font_6x13_tf :
-			    u8g2_font_cu12_t_cyrillic);
-	draw_metric(0, 15, english ? "Humidity" : "Вологість",
-		    &snapshot->humidity, "%");
-	draw_metric(0, 42, english ? "Temp" : "Темп",
-		    &snapshot->temperature, "C");
-	draw_metric(0, 69, english ? "Light" : "Світло",
-		    &snapshot->lux, "lx");
-	draw_metric(0, 96, "CO2", &snapshot->co2, "ppm");
+	int width = u8g2_GetStrWidth(&s_u8g2, text);
+	return cell_x + (64 - width) / 2;
+}
+
+static void draw_environment_cell(int cell_x, int dx,
+				  int label_y, int value_y,
+				  const char *label,
+				  const mixer_metric_t *metric,
+				  const char *suffix, bool decimal)
+{
+	char value[16];
+	format_metric(value, sizeof(value), metric, suffix, decimal);
+	u8g2_SetFont(&s_u8g2, u8g2_font_6x13B_tf);
+	u8g2_DrawStr(&s_u8g2, centered_cell_x(cell_x, label) + dx,
+		     label_y, label);
+	u8g2_SetFont(&s_u8g2, u8g2_font_10x20_tf);
+	u8g2_DrawStr(&s_u8g2, centered_cell_x(cell_x, value) + dx,
+		     value_y, value);
+}
+
+static void draw_environment(const mixer_snapshot_t *snapshot)
+{
+	int dx = 0;
+	int dy = 0;
+	environment_shift(&dx, &dy);
+	draw_environment_cell(0, dx, 14 + dy, 40 + dy, "TEMP",
+			      &snapshot->temperature, "C", true);
+	draw_environment_cell(64, dx, 14 + dy, 40 + dy, "HUM",
+			      &snapshot->humidity, "%", true);
+	draw_environment_cell(0, dx, 76 + dy, 102 + dy, "CO2 ppm",
+			      &snapshot->co2, "", false);
+	draw_environment_cell(64, dx, 76 + dy, 102 + dy, "LUX",
+			      &snapshot->lux, "", false);
 }
 
 static void draw_screen(void)
@@ -136,7 +195,7 @@ static void draw_screen(void)
 	char line[48];
 	switch (screen) {
 	case MIXER_SCREEN_ENVIRONMENT:
-		draw_environment(&snapshot, english);
+		draw_environment(&snapshot);
 		break;
 	case MIXER_SCREEN_PULSE:
 		u8g2_DrawUTF8(&s_u8g2, 0, 18, english ? "Pulse" : "Пульс");
@@ -194,9 +253,16 @@ static void draw_screen(void)
 static void display_task(void *arg)
 {
 	(void)arg;
+	uint32_t reported_errors = s_spi_error_count;
 	for (;;) {
 		draw_screen();
-		vTaskDelay(pdMS_TO_TICKS(100));
+		if (reported_errors != s_spi_error_count) {
+			reported_errors = s_spi_error_count;
+			ESP_LOGW(TAG, "SSD1327 SPI errors=%lu last=%s",
+				 (unsigned long)reported_errors,
+				 esp_err_to_name(s_spi_last_error));
+		}
+		vTaskDelay(pdMS_TO_TICKS(CONFIG_MIXER_DISPLAY_REFRESH_MS));
 	}
 }
 
@@ -219,7 +285,7 @@ esp_err_t display_controller_start(void)
 		return err;
 	}
 	spi_device_interface_config_t dev = {
-		.clock_speed_hz = 8000000,
+		.clock_speed_hz = CONFIG_MIXER_DISPLAY_SPI_CLOCK_HZ,
 		.mode = 0,
 		.spics_io_num = CONFIG_MIXER_DISPLAY_CS_GPIO,
 		.queue_size = 1,
@@ -234,6 +300,7 @@ esp_err_t display_controller_start(void)
 	u8g2_Setup_ssd1327_ws_128x128_f(&s_u8g2, U8G2_R0, byte_spi, gpio_delay);
 	u8g2_InitDisplay(&s_u8g2);
 	u8g2_SetPowerSave(&s_u8g2, 0);
+	u8g2_SetContrast(&s_u8g2, CONFIG_MIXER_DISPLAY_CONTRAST);
 	u8g2_ClearDisplay(&s_u8g2);
 	if (xTaskCreate(display_task, "display", 4096, NULL, 3,
 			&s_display_task) != pdPASS) {
@@ -246,7 +313,12 @@ esp_err_t display_controller_start(void)
 		}
 		return ESP_ERR_NO_MEM;
 	}
-	ESP_LOGI(TAG, "SSD1327 ready");
+	ESP_LOGI(TAG,
+		 "SSD1327 ready spi=%d Hz contrast=%d refresh=%d ms errors=%lu",
+		 CONFIG_MIXER_DISPLAY_SPI_CLOCK_HZ,
+		 CONFIG_MIXER_DISPLAY_CONTRAST,
+		 CONFIG_MIXER_DISPLAY_REFRESH_MS,
+		 (unsigned long)s_spi_error_count);
 	return ESP_OK;
 }
 

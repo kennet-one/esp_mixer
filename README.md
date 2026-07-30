@@ -35,7 +35,10 @@ configuration and must never be committed.
 ## Runtime
 
 - Sensors are sampled outside the display render path.
-- The display renders an immutable cached snapshot at 10 Hz.
+- The display renders an immutable cached snapshot with a compact 2x2
+  environment layout.
+- Reduced contrast, a 4 MHz SPI clock, a 250 ms refresh period and periodic
+  two-pixel shifts reduce noise and slow additional OLED wear.
 - A sensor failure does not block the display, mesh, or other sensors.
 - Unavailable values render as `--`.
 - The pulse sensor LED is enabled only on the pulse screen.

@@ -20,6 +20,26 @@ menu "esp_mixer"
     config MIXER_DISPLAY_DC_GPIO
         int "SSD1327 DC GPIO"
         default 2
+    config MIXER_DISPLAY_SPI_CLOCK_HZ
+        int "SSD1327 SPI clock (Hz)"
+        range 500000 10000000
+        default 4000000
+        help
+            Lower clocks tolerate long or noisy display wiring better.
+    config MIXER_DISPLAY_CONTRAST
+        int "SSD1327 contrast"
+        range 1 255
+        default 96
+        help
+            Reduced contrast limits glare and slows further OLED wear.
+    config MIXER_DISPLAY_REFRESH_MS
+        int "Display refresh period (ms)"
+        range 100 2000
+        default 250
+    config MIXER_DISPLAY_PIXEL_SHIFT_SECONDS
+        int "Environment screen pixel-shift period (seconds, 0 disables)"
+        range 0 3600
+        default 60
     config MIXER_MHZ19_RX_GPIO
         int "MH-Z19B RX GPIO"
         default 16
