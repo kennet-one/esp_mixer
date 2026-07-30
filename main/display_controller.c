@@ -29,6 +29,10 @@ static char s_garland[16] = "--";
 static char s_red_power[16] = "--";
 static char s_red_mode[16] = "--";
 static char s_red_brightness[16] = "--";
+static bool s_host_weather_active;
+static bool s_host_weather_valid;
+static uint8_t s_host_rain_chance;
+static uint32_t s_host_weather_updated_ms;
 static spi_device_handle_t s_spi;
 static u8g2_t s_u8g2;
 static TaskHandle_t s_display_task;
@@ -92,8 +96,8 @@ static uint8_t byte_spi(u8x8_t *u8x8, uint8_t msg,
 
 static void environment_shift(int *x, int *y)
 {
-	static const uint8_t offsets[4][2] = {
-		{0, 0}, {2, 0}, {2, 2}, {0, 2},
+	static const int8_t offsets[4][2] = {
+		{-1, -1}, {1, -1}, {1, 1}, {-1, 1},
 	};
 	if (CONFIG_MIXER_DISPLAY_PIXEL_SHIFT_SECONDS <= 0) {
 		*x = 0;
@@ -107,53 +111,102 @@ static void environment_shift(int *x, int *y)
 }
 
 static void format_metric(char *buffer, size_t size,
-			  const mixer_metric_t *metric,
-			  const char *suffix, bool decimal)
+			  const mixer_metric_t *metric, bool decimal)
 {
 	if (!metric->valid) {
 		snprintf(buffer, size, "--");
 		return;
 	}
 	double value = metric->value_x10 / 10.0;
-	snprintf(buffer, size, decimal ? "%.1f%s" : "%.0f%s",
-		 value, suffix);
+	snprintf(buffer, size, decimal ? "%.1f" : "%.0f", value);
 }
 
-static int centered_cell_x(int cell_x, const char *text)
+static int centered_cell_x(int cell_x, int width)
 {
-	int width = u8g2_GetStrWidth(&s_u8g2, text);
 	return cell_x + (64 - width) / 2;
+}
+
+static void draw_environment_value(int cell_x, int dx, int value_y,
+				   const char *value, const char *suffix)
+{
+	const uint8_t *number_font = u8g2_font_logisoso22_tn;
+	const uint8_t *suffix_font = u8g2_font_6x13B_tf;
+	u8g2_SetFont(&s_u8g2, number_font);
+	int value_width = u8g2_GetStrWidth(&s_u8g2, value);
+	u8g2_SetFont(&s_u8g2, suffix_font);
+	int suffix_width = suffix[0] ? u8g2_GetStrWidth(&s_u8g2, suffix) + 1 : 0;
+	if (value_width + suffix_width > 60) {
+		number_font = u8g2_font_logisoso18_tn;
+		u8g2_SetFont(&s_u8g2, number_font);
+		value_width = u8g2_GetStrWidth(&s_u8g2, value);
+	}
+	int total_width = value_width + suffix_width;
+	int x = centered_cell_x(cell_x, total_width) + dx;
+	u8g2_SetFont(&s_u8g2, number_font);
+	u8g2_DrawStr(&s_u8g2, x, value_y, value);
+	if (suffix[0]) {
+		u8g2_SetFont(&s_u8g2, suffix_font);
+		u8g2_DrawStr(&s_u8g2, x + value_width + 1, value_y, suffix);
+	}
 }
 
 static void draw_environment_cell(int cell_x, int dx,
 				  int label_y, int value_y,
-				  const char *label,
+				  const char *label, bool label_utf8,
 				  const mixer_metric_t *metric,
 				  const char *suffix, bool decimal)
 {
 	char value[16];
-	format_metric(value, sizeof(value), metric, suffix, decimal);
-	u8g2_SetFont(&s_u8g2, u8g2_font_6x13B_tf);
-	u8g2_DrawStr(&s_u8g2, centered_cell_x(cell_x, label) + dx,
-		     label_y, label);
-	u8g2_SetFont(&s_u8g2, u8g2_font_10x20_tf);
-	u8g2_DrawStr(&s_u8g2, centered_cell_x(cell_x, value) + dx,
-		     value_y, value);
+	format_metric(value, sizeof(value), metric, decimal);
+	u8g2_SetFont(&s_u8g2, label_utf8 ? u8g2_font_9x15_t_cyrillic :
+			    u8g2_font_9x15B_tf);
+	int label_width = label_utf8 ? u8g2_GetUTF8Width(&s_u8g2, label) :
+		u8g2_GetStrWidth(&s_u8g2, label);
+	int label_x = centered_cell_x(cell_x, label_width) + dx;
+	if (label_utf8)
+		u8g2_DrawUTF8(&s_u8g2, label_x, label_y, label);
+	else
+		u8g2_DrawStr(&s_u8g2, label_x, label_y, label);
+	draw_environment_value(cell_x, dx, value_y, value, suffix);
 }
 
-static void draw_environment(const mixer_snapshot_t *snapshot)
+static void draw_environment(const mixer_snapshot_t *snapshot, bool english,
+			     bool host_weather_active,
+			     bool host_weather_valid,
+			     uint8_t rain_chance)
 {
 	int dx = 0;
 	int dy = 0;
 	environment_shift(&dx, &dy);
-	draw_environment_cell(0, dx, 14 + dy, 40 + dy, "TEMP",
+	draw_environment_cell(0, dx, 15 + dy, 46 + dy,
+			      english ? "TEMP" : "ТЕМП", !english,
 			      &snapshot->temperature, "C", true);
-	draw_environment_cell(64, dx, 14 + dy, 40 + dy, "HUM",
+	draw_environment_cell(64, dx, 15 + dy, 46 + dy,
+			      english ? "HUM" : "ВОЛОГ", !english,
 			      &snapshot->humidity, "%", true);
-	draw_environment_cell(0, dx, 76 + dy, 102 + dy, "CO2 ppm",
+	draw_environment_cell(0, dx, 78 + dy, 109 + dy, "CO2", false,
 			      &snapshot->co2, "", false);
-	draw_environment_cell(64, dx, 76 + dy, 102 + dy, "LUX",
-			      &snapshot->lux, "", false);
+	if (host_weather_active) {
+		char value[8];
+		snprintf(value, sizeof(value), host_weather_valid ? "%u" : "--",
+			 (unsigned)rain_chance);
+		const char *label = english ? "RAIN" : "ДОЩ";
+		u8g2_SetFont(&s_u8g2, english ? u8g2_font_9x15B_tf :
+				    u8g2_font_9x15_t_cyrillic);
+		int label_width = english ? u8g2_GetStrWidth(&s_u8g2, label) :
+			u8g2_GetUTF8Width(&s_u8g2, label);
+		int label_x = centered_cell_x(64, label_width) + dx;
+		if (english)
+			u8g2_DrawStr(&s_u8g2, label_x, 78 + dy, label);
+		else
+			u8g2_DrawUTF8(&s_u8g2, label_x, 78 + dy, label);
+		draw_environment_value(64, dx, 109 + dy, value,
+				       host_weather_valid ? "%" : "");
+	} else {
+		draw_environment_cell(64, dx, 78 + dy, 109 + dy,
+				      english ? "LUX" : "ЛЮКС", !english,
+				      &snapshot->lux, "", false);
+	}
 }
 
 static void draw_screen(void)
@@ -165,6 +218,9 @@ static void draw_screen(void)
 	bool connected;
 	bool reliable;
 	bool mesh_notice;
+	bool host_weather_active;
+	bool host_weather_valid;
+	uint8_t host_rain_chance;
 	uint32_t screen_entered;
 	char notice[32];
 	char garland[16], power[16], mode[16], brightness[16];
@@ -173,6 +229,11 @@ static void draw_screen(void)
 	english = s_english;
 	connected = s_mesh_connected;
 	reliable = s_reliable;
+	host_weather_active = s_host_weather_active &&
+		(uint32_t)(now_ms() - s_host_weather_updated_ms) <=
+			(uint32_t)CONFIG_MIXER_HOST_WEATHER_LEASE_MS;
+	host_weather_valid = s_host_weather_valid;
+	host_rain_chance = s_host_rain_chance;
 	screen_entered = s_screen_entered_ms;
 	mesh_notice = (int32_t)(s_mesh_notice_until_ms - now_ms()) > 0;
 	memcpy(notice, s_mesh_notice, sizeof(notice));
@@ -195,7 +256,8 @@ static void draw_screen(void)
 	char line[48];
 	switch (screen) {
 	case MIXER_SCREEN_ENVIRONMENT:
-		draw_environment(&snapshot);
+		draw_environment(&snapshot, english, host_weather_active,
+				 host_weather_valid, host_rain_chance);
 		break;
 	case MIXER_SCREEN_PULSE:
 		u8g2_DrawUTF8(&s_u8g2, 0, 18, english ? "Pulse" : "Пульс");
@@ -385,5 +447,17 @@ void display_controller_set_lighting_state(const char *token)
 		snprintf(s_red_mode, sizeof(s_red_mode), "%s", token + 8);
 	else if (strncmp(token, "02", 2) == 0)
 		snprintf(s_red_brightness, sizeof(s_red_brightness), "%s", token + 2);
+	portEXIT_CRITICAL(&s_lock);
+}
+
+void display_controller_set_host_weather(bool active, bool valid,
+					 uint8_t rain_chance_percent)
+{
+	portENTER_CRITICAL(&s_lock);
+	s_host_weather_active = active;
+	s_host_weather_valid = active && valid;
+	s_host_rain_chance = rain_chance_percent <= 100 ?
+		rain_chance_percent : 100;
+	s_host_weather_updated_ms = now_ms();
 	portEXIT_CRITICAL(&s_lock);
 }

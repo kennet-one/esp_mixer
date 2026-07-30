@@ -36,7 +36,11 @@ configuration and must never be committed.
 
 - Sensors are sampled outside the display render path.
 - The display renders an immutable cached snapshot with a compact 2x2
-  environment layout.
+  environment layout. Ukrainian labels are the default; the gesture toggle
+  retains English.
+- A strict 90-second `mixer.weather:*` lease can replace only the visible lux
+  cell with today's rain chance. `off` or lease expiry restores local lux,
+  while typed lux telemetry and `lux_echo` continue unchanged.
 - Reduced contrast, a 4 MHz SPI clock, a 250 ms refresh period and periodic
   two-pixel shifts reduce noise and slow additional OLED wear.
 - A sensor failure does not block the display, mesh, or other sensors.

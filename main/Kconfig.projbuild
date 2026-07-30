@@ -40,6 +40,13 @@ menu "esp_mixer"
         int "Environment screen pixel-shift period (seconds, 0 disables)"
         range 0 3600
         default 60
+    config MIXER_HOST_WEATHER_LEASE_MS
+        int "Desktop weather display lease (ms)"
+        range 30000 600000
+        default 90000
+        help
+            The rain forecast replaces local lux only while KeeMASH renews
+            this lease. Lux returns automatically after the lease expires.
     config MIXER_MHZ19_RX_GPIO
         int "MH-Z19B RX GPIO"
         default 16

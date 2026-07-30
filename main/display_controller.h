@@ -22,3 +22,5 @@ void display_controller_toggle_language(void);
 void display_controller_set_mesh(bool connected, bool reliable);
 void display_controller_show_mesh_event(const char *text);
 void display_controller_set_lighting_state(const char *token);
+void display_controller_set_host_weather(bool active, bool valid,
+					 uint8_t rain_chance_percent);

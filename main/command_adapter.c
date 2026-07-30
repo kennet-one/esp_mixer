@@ -1,6 +1,8 @@
 #include "command_adapter.h"
 
+#include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "esp_timer.h"
@@ -95,6 +97,7 @@ bool command_adapter_execute(const char *command, uint8_t *status,
 {
 	if (!command) return false;
 	uint16_t metric = 0;
+	const char *result_text = NULL;
 	if (strcmp(command, "ppm_echo") == 0)
 		metric = MESH_V2_SENSOR_METRIC_CO2_PPM;
 	else if (strcmp(command, "temp_echo") == 0)
@@ -103,12 +106,35 @@ bool command_adapter_execute(const char *command, uint8_t *status,
 		metric = MESH_V2_SENSOR_METRIC_HUMIDITY_RH;
 	else if (strcmp(command, "lux_echo") == 0)
 		metric = MESH_V2_SENSOR_METRIC_ILLUMINANCE_LUX;
-	else if (strcmp(command, "sens_echo") != 0 && strncmp(command, "state:", 6) != 0)
+	else if (strcmp(command, "sens_echo") != 0 &&
+		 strncmp(command, "state:", 6) != 0 &&
+		 strncmp(command, "mixer.weather:", 14) != 0)
 		return false;
 
 	esp_err_t err = ESP_OK;
 	if (strncmp(command, "state:", 6) == 0) {
 		display_controller_set_lighting_state(command + 6);
+	} else if (strncmp(command, "mixer.weather:", 14) == 0) {
+		const char *value = command + 14;
+		if (strcmp(value, "off") == 0) {
+			display_controller_set_host_weather(false, false, 0);
+			result_text = "weather=off";
+		} else if (strcmp(value, "?") == 0) {
+			display_controller_set_host_weather(true, false, 0);
+			result_text = "weather=unknown";
+		} else {
+			errno = 0;
+			char *end = NULL;
+			long chance = strtol(value, &end, 10);
+			if (!value[0] || errno != 0 || !end || *end != '\0' ||
+			    chance < 0 || chance > 100 ||
+			    strspn(value, "0123456789") != strlen(value)) {
+				err = ESP_ERR_INVALID_ARG;
+			} else {
+				display_controller_set_host_weather(
+					true, true, (uint8_t)chance);
+			}
+		}
 	} else {
 		err = command_adapter_publish(MESH_V2_SENSOR_FLAG_LEGACY_REPLY,
 					     0, metric);
@@ -116,8 +142,15 @@ bool command_adapter_execute(const char *command, uint8_t *status,
 	if (status) *status = err == ESP_OK ? MESH_V2_CONTROL_STATUS_OK :
 		MESH_V2_CONTROL_STATUS_FAILED;
 	if (result && result_size > 0) {
-		snprintf(result, result_size, "%s",
-			 err == ESP_OK ? "accepted" : esp_err_to_name(err));
+		if (result_text) {
+			snprintf(result, result_size, "%s", result_text);
+		} else if (strncmp(command, "mixer.weather:", 14) == 0 &&
+			   err == ESP_OK) {
+			snprintf(result, result_size, "weather=%s", command + 14);
+		} else {
+			snprintf(result, result_size, "%s",
+				 err == ESP_OK ? "accepted" : esp_err_to_name(err));
+		}
 	}
 	return true;
 }
